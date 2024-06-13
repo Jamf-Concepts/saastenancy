@@ -22,5 +22,5 @@ Using Custom DNS hostname mapping, an administrator can map specified domain hos
 
 Configuration within the supported SaaS destination for blocking access from personal accounts is required.
 
-:google: Google: [Block Access to Consumer Accounts](https://support.google.com/a/answer/1668854?hl=en)
-:microsoft: Microsoft: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2#migrate-tenant-restrictions-v1-policies-to-v2-on-the-proxy)
+- Google: [Block Access to Consumer Accounts](https://support.google.com/a/answer/1668854?hl=en)
+- Microsoft: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2#migrate-tenant-restrictions-v1-policies-to-v2-on-the-proxy)
