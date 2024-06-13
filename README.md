@@ -2,11 +2,11 @@
 
 Jamf Connect SaaS Tenancy
 
-This CloudFormation template will result in the creation of an AWS EC2 instance running Nginx, configured to serve as a proxy for specified SaaS applications over HTTPS.
+This CloudFormation template creates an AWS EC2 instance running Nginx, configured to serve as a proxy for SaaS applications over HTTPS. 
 
 ## Overview:
 
-The resulting outcome of using this CloudFormation template when paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://learn.jamf.com/en-US/bundle/jamf-security-cloud-setup-guide/page/Hostname_Mapping.html) enables organizations to securely route and control access to specified SaaS applications through a centralized proxy server, enhancing security, and ultimately preventing Data Loss (DLP) by ensuring personal accounts with the SaaS providers cannot be accessed from managed devices. ie. unable to use a personally-owned jane.appleseed@gmail.com email account, and rather only the org managed jane.appleseed@org.com gmail account would be able to be used.
+When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://learn.jamf.com/en-US/bundle/jamf-security-cloud-setup-guide/page/Hostname_Mapping.html), this CloudFormation template enables organizations to securely route and control access to specified SaaS applications through a centralized proxy server, enhancing security, and ultimately preventing Data Loss by ensuring that users cannot use personal accounts to login to SaaS applications from from managed devices. 
 
 ## AWS CloudFormation Technical Components:
 
@@ -18,7 +18,7 @@ The resulting outcome of using this CloudFormation template when paired with Jam
 
 #Jamf Security Cloud:
 
-Using Custom DNS hostname mapping, an administrator can map specified domain hostnames to the custom IP addresses allocated with the EC2 instance. Ie: Once configured, users attempting to access accounts.google.com from their device would be routed to the EC2 Elastic IP proxy created via the CloudFormation template. The custom headers would be injected into the HTTP requests and then forwarded to the destination.
+Using Custom DNS hostname mapping, an administrator can map specified domain hostnames to the custom IP addresses allocated with the EC2 instance. Once configured, users attempting to access accounts.google.com from their device would be routed to the EC2 Elastic IP proxy created via the CloudFormation template. The custom headers would be injected into the HTTP requests and then forwarded to the destination.
 
 Configuration within the supported SaaS destination for blocking access from personal accounts is required.
 
