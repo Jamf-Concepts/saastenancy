@@ -16,7 +16,7 @@ When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://lea
 - Dynamic Configuration: The template allows for dynamic configuration of Nginx based on parameters such as the domain and SaaS application type provided during stack creation. This flexibility enables the proxy server to adapt to different environments and use cases.
 - Elastic IP Association: An Elastic IP address is allocated and associated with the EC2 instance, providing a static public IP address for external access to the proxy server.
 
-# Jamf Security Cloud:
+## Jamf Security Cloud:
 
 Using Custom DNS hostname mapping, an administrator can map specified domain hostnames to the custom IP addresses allocated with the EC2 instance. Once configured, users attempting to access accounts.google.com from their device would be routed to the EC2 Elastic IP proxy created via the CloudFormation template. The custom headers would be injected into the HTTP requests and then forwarded to the destination.
 
