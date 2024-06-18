@@ -8,6 +8,8 @@ This CloudFormation template creates an AWS EC2 instance running Nginx, configur
 
 When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://learn.jamf.com/en-US/bundle/jamf-security-cloud-setup-guide/page/Hostname_Mapping.html), this CloudFormation template enables organizations to securely route and control access to specified SaaS applications through a centralized proxy server, enhancing security, and ultimately preventing Data Loss by ensuring that users cannot use personal accounts to login to SaaS applications from from managed devices. 
 
+![](diagram.png)
+
 ## AWS CloudFormation Technical Components:
 
 - Nginx Reverse Proxy: The EC2 instance will act as a reverse proxy server using Nginx, which will handle incoming HTTPS requests from clients and forward them to the appropriate SaaS applications based on the specified domain and SaaS application type.
