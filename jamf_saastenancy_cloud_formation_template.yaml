@@ -4,21 +4,21 @@ Description: Simple EC2 instance with Nginx and Elastic IP.
 Mappings:
   RegionAMIs:
     us-east-1:
-      AMI: ami-0005e0cfe09cc9050
+      AMI: ami-0eb01a520e67f7f20
     us-east-2:
-      AMI: ami-0cd3c7f72edd5b06d
+      AMI: ami-07a5db12eede6ff87
     us-west-1:
-      AMI: ami-0a5ed7a812aeb495a
+      AMI: ami-05f45e0f5aeac9a24
     us-west-2:
-      AMI: ami-0944e91aed79c721c
+      AMI: ami-00a0b62a1660255c0
     ap-southeast-2:
-      AMI: ami-083327d0fe6d65178
+      AMI: ami-01b5f7a30f320f409
     ap-northeast-1:
-      AMI: ami-0506f0f56e3a057a4
+      AMI: ami-09ff6f432d0ee628e
     eu-central-1:
-      AMI: ami-025a6a5beb74db87b
+      AMI: ami-00068b9d3a9643636
     eu-west-2:
-      AMI: ami-0500f74cc2b89fb6b
+      AMI: ami-05e77069ed898709c
 
 Parameters:
   KeyName:
@@ -28,11 +28,11 @@ Parameters:
   InstanceType:
     Description: EC2 instance type
     Type: String
-    Default: t2.micro
+    Default: t4g.micro
     AllowedValues:
-      - t2.micro
-      - t2.small
-      - t2.medium
+      - t4g.micro
+      - t4g.small
+      - t4g.medium
   CertificateBody:
     Description: The body of the SSL/TLS certificate base64 encoded (leave empty for self signed)
     Type: String
