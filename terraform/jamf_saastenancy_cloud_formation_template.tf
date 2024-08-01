@@ -19,7 +19,7 @@ variable "CertificatePrivateKey" {
 variable "Domain" {
   description = "internal domain to add to the header if multiple seperated by space"
   type        = string
-  default     = "example.com example.dev"
+  default     = "accounts.google.com"
 }
 variable "SaaSApplication" {
   description = "Choose which application to allow for the domain"
@@ -60,6 +60,8 @@ locals {
     CertificateBody       = var.CertificateBody
     CertificatePrivateKey = var.CertificatePrivateKey
   })
+
+  domain_array = split(" ", var.Domain)
 }
 
 
