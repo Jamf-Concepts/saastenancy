@@ -131,7 +131,3 @@ output "PublicIP" {
   description = "The Public IP address of the instance please add this as your JSC custom gateway address"
   value       = aws_eip.ElasticIP.public_ip
 }
-
-output "userdata" {
-  value = local.init_script
-}
