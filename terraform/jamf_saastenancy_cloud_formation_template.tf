@@ -43,6 +43,9 @@ variable "SubnetId" {
 
 # Define local mappings for AMI IDs based on region
 locals {
+
+  final_certificate_body       = var.CertificateBody != "" ? var.CertificateBody : tls_self_signed_cert.saastencert.cert_pem
+  final_certificate_PrivateKey = var.CertificatePrivateKey != "" ? var.CertificatePrivateKey : tls_self_signed_cert.saastencert.private_key_pem
   region_amis = {
     "us-east-1"      = "ami-0eb01a520e67f7f20"
     "us-east-2"      = "ami-07a5db12eede6ff87"
@@ -57,8 +60,8 @@ locals {
   init_script = templatefile("${path.module}/script.sh", {
     SaaSApplication       = var.SaaSApplication
     Domain                = var.Domain
-    CertificateBody       = var.CertificateBody
-    CertificatePrivateKey = var.CertificatePrivateKey
+    CertificateBody       = local.final_certificate_body
+    CertificatePrivateKey = local.final_certificate_PrivateKey
   })
 
   domain_array = split(" ", var.Domain)
@@ -132,6 +135,8 @@ output "PublicIP" {
   value       = aws_eip.ElasticIP.public_ip
 }
 
-output "userdata" {
-  value = local.init_script
+output "certbody" {
+  value = local.final_certificate_body
 }
+
+
