@@ -27,6 +27,7 @@ Configuration within the supported SaaS destination for blocking access from per
 - Google: [Block Access to Consumer Accounts](https://support.google.com/a/answer/1668854?hl=en)
 - Microsoft: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2#migrate-tenant-restrictions-v1-policies-to-v2-on-the-proxy)
 
+## License:
 
 Copyright 2024, Jamf
 
