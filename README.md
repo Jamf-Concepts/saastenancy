@@ -1,14 +1,40 @@
-# saastenancy
+# Jamf SaaS Tenancy
 
-Jamf Connect SaaS Tenancy
+This repository contains AWS CloudFormation templates that create an AWS EC2 instance running Nginx, configured to serve as a proxy for SaaS applications over HTTPS.
 
-This CloudFormation template creates an AWS EC2 instance running Nginx, configured to serve as a proxy for SaaS applications over HTTPS. 
+## Supported SaaS Applications
+
+Each SaaS application has its own CloudFormation template in the `aws_cloudformation_templates/` folder:
+
+- **Google** - `jamf_saastenancy_google.yaml`
+- **Microsoft Tenant Restrictions v1** - `jamf_saastenancy_microsoft_v1.yaml`
+- **Microsoft Tenant Restrictions v2** - `jamf_saastenancy_microsoft_v2.yaml`
+- **Slack** - `jamf_saastenancy_slack.yaml`
+- **Dropbox** - `jamf_saastenancy_dropbox.yaml` 
 
 ## Overview:
 
 When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://learn.jamf.com/en-US/bundle/jamf-security-cloud-setup-guide/page/Hostname_Mapping.html), this CloudFormation template enables organizations to securely route and control access to specified SaaS applications through a centralized proxy server, enhancing security, and ultimately preventing Data Loss by ensuring that users cannot use personal accounts to login to SaaS applications from from managed devices. 
 
 ![](diagram.png)
+
+## Repository Structure
+
+```
+├── aws_cloudformation_templates/   # Standalone CloudFormation templates
+│   ├── jamf_saastenancy_google.yaml
+│   ├── jamf_saastenancy_microsoft_v1.yaml 
+│   ├── jamf_saastenancy_microsoft_v2.yaml
+│   ├── jamf_saastenancy_slack.yaml
+│   └── jamf_saastenancy_dropbox.yaml
+└── terraform/                      # Integrated deployment with Jamf Pro and JSC
+    ├── main.tf
+    ├── jamf_saastenancy_cloud_formation_template.tf
+    ├── script.sh
+    ├── jscconfig.tf
+    ├── prosaasconfig.tf
+    └── proconfig.tf
+```
 
 ## AWS CloudFormation Technical Components:
 
@@ -25,11 +51,12 @@ Using Custom DNS hostname mapping, an administrator can map specified domain hos
 Configuration within the supported SaaS destination for blocking access from personal accounts is required.
 
 - Google: [Block Access to Consumer Accounts](https://support.google.com/a/answer/1668854?hl=en)
-- Microsoft: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2#migrate-tenant-restrictions-v1-policies-to-v2-on-the-proxy)
+- Microsoft v1: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2#migrate-tenant-restrictions-v1-policies-to-v2-on-the-proxy)
+- Microsoft v2: [Set up Tenant Restrictions](https://learn.microsoft.com/en-us/entra/external-id/tenant-restrictions-v2)
 
 ## License:
 
-Copyright 2024, Jamf
+Copyright 2026, Jamf
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
