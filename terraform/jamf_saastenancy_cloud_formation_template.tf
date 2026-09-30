@@ -15,6 +15,7 @@ variable "CertificateBody" {
 variable "CertificatePrivateKey" {
   description = "The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)"
   type        = string
+  sensitive   = true
 }
 variable "Domain" {
   description = "internal domain to add to the header if multiple seperated by space"
@@ -108,6 +109,9 @@ resource "aws_instance" "SaaSTenancyNginx" {
   subnet_id              = var.SubnetId
   user_data_base64       = base64gzip(local.init_script)
 
+  metadata_options {
+    http_tokens = "required"
+  }
 
   tags = {
     Name = "SaaSTenancyNginx"

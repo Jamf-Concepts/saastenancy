@@ -103,7 +103,7 @@ if echo "$domain" | grep -q " "; then
     IFS=' ' read -r -a array <<< "$domain"
     
     # Loop through the array and append each element to the new variable
-    for element in "$${!array[@]}"
+    for element in "$${array[@]}"
     do
         if [[ $header_type == "Google" ]]; then
   # Creating CSR for Google
@@ -113,8 +113,13 @@ if echo "$domain" | grep -q " "; then
   nginx_header+="
 proxy_set_header 'X-GooGApps-Allowed-Domains' $element;"
   nginx_proxy_pass="
-proxy_pass https://accounts.google.com;"
-  
+proxy_pass https://accounts.google.com;
+proxy_ssl_verify on;
+proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+proxy_ssl_verify_depth 2;
+proxy_ssl_server_name on;
+proxy_ssl_name accounts.google.com;"
+
         elif [[ $header_type == "Microsoft" ]]; then
   openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/microsoft.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=stamp2.login.microsoftonline.com"
   # Signing the CSR with internal CA
@@ -123,8 +128,13 @@ proxy_pass https://accounts.google.com;"
       proxy_set_header 'Restrict-Access-To-Tenants' $element;
       proxy_set_header 'Restrict-Access-Context' $element;"
   nginx_proxy_pass="
-      proxy_pass https://login.microsoftonline.com;"
-  
+      proxy_pass https://login.microsoftonline.com;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name login.microsoftonline.com;"
+
         elif [[ $header_type == "Slack" ]]; then
   # Creating CSR for Slack
   openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/slack.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=slack.com"
@@ -132,11 +142,15 @@ proxy_pass https://accounts.google.com;"
   openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
   nginx_header+="
       proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $element;
-  
-      X-Slack-Allowed-Workspaces' $element;"
+      proxy_set_header 'X-Slack-Allowed-Workspaces' $element;"
   nginx_proxy_pass="
-      proxy_pass https://slack.com/signin;"
-  
+      proxy_pass https://slack.com/signin;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name slack.com;"
+
         elif [[ $header_type == "Dropbox" ]]; then
   # Creating CSR for Dropbox
   openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/dropbox.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=*.dropbox.com"
@@ -145,8 +159,13 @@ proxy_pass https://accounts.google.com;"
   nginx_header+="
       proxy_set_header 'X-Dropbox-allowed-Team-Ids' $element;"
   nginx_proxy_pass="
-      proxy_pass https://www.dropbox.com/login;"
-  
+      proxy_pass https://www.dropbox.com/login;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name www.dropbox.com;"
+
         fi
     done
     
@@ -161,8 +180,13 @@ else
         nginx_header="
 proxy_set_header 'X-GooGApps-Allowed-Domains' $domain;"
         nginx_proxy_pass="
-proxy_pass https://accounts.google.com;"
-        
+proxy_pass https://accounts.google.com;
+proxy_ssl_verify on;
+proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+proxy_ssl_verify_depth 2;
+proxy_ssl_server_name on;
+proxy_ssl_name accounts.google.com;"
+
     elif [[ $header_type == "Microsoft" ]]; then
         # Creating CSR for Microsoft
         openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/microsoft.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=stamp2.login.microsoftonline.com"
@@ -172,8 +196,13 @@ proxy_pass https://accounts.google.com;"
       proxy_set_header 'Restrict-Access-To-Tenants' $domain;
       proxy_set_header 'Restrict-Access-Context' $domain;"
         nginx_proxy_pass="
-      proxy_pass https://login.microsoftonline.com;"
-        
+      proxy_pass https://login.microsoftonline.com;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name login.microsoftonline.com;"
+
     elif [[ $header_type == "Slack" ]]; then
         # Creating CSR for Slack
         openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/slack.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=slack.com"
@@ -183,8 +212,13 @@ proxy_pass https://accounts.google.com;"
       proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $domain;
       X-Slack-Allowed-Workspaces' $domain;"
         nginx_proxy_pass="
-      proxy_pass https://slack.com/signin;"
-        
+      proxy_pass https://slack.com/signin;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name slack.com;"
+
     elif [[ $header_type == "Dropbox" ]]; then
         # Creating CSR for Dropbox
         openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/dropbox.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=*.dropbox.com"
@@ -193,8 +227,13 @@ proxy_pass https://accounts.google.com;"
         nginx_header="
       proxy_set_header 'X-Dropbox-allowed-Team-Ids' $domain;"
         nginx_proxy_pass="
-      proxy_pass https://accounts.google.com;"
-        
+      proxy_pass https://www.dropbox.com/login;
+      proxy_ssl_verify on;
+      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+      proxy_ssl_verify_depth 2;
+      proxy_ssl_server_name on;
+      proxy_ssl_name www.dropbox.com;"
+
     fi
 fi
 
@@ -356,8 +395,6 @@ server {
   proxy_buffer_size 64k;
   # Sets the maximum size of the buffers that can be busy sending a response to the client while the response is not fully read
   proxy_busy_buffers_size 64k;
-  #  Sets the DNS resolver to the IP address
-  resolver   1.1.1.1 ipv6=off;
   # Sets the Host header of the request to the host of the incoming client request
   proxy_set_header Host \$host;
   # Passes the original client IP address to the proxied server
