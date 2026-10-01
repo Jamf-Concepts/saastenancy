@@ -4,3 +4,5 @@
 .terraform*
 *.tfvars
 .DS_Store
+terraform/.profile.b64
+terraform/.profile.b64.tmp

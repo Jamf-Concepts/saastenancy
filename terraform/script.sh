@@ -19,7 +19,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 yum update -y
-yum install -y nginx openssl
+yum install -y nginx openssl awscli
 mkdir -p /var/www/html/
 mkdir -p /var/checkrunning/
 mkdir -p /etc/nginx/
@@ -403,6 +403,9 @@ PROFILE
 
 sudo chown -R www-data:www-data /var/www/html
 sudo chmod -R 755 /var/www/html
+
+profile_b64=$(base64 -w0 /var/www/html/JSCP_Proxy_Cert.mobileconfig)
+aws ssm put-parameter --region '${AwsRegion}' --name '${SsmParameterName}' --type String --value "$profile_b64" --overwrite
 
 echo $nginx_header > /tmp/nginx_header
 echo $nginx_proxy_pass > /tmp/nginx_proxy_pass
