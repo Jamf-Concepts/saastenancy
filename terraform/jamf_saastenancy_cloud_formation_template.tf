@@ -17,10 +17,10 @@ variable "CertificatePrivateKey" {
   type        = string
   sensitive   = true
 }
-variable "Domain" {
-  description = "internal domain to add to the header if multiple seperated by space"
+variable "TenantDomain" {
+  description = "Tenant domain(s) to restrict sign-in to, injected into the SaaS tenant-restriction header; space separated if multiple"
   type        = string
-  default     = "accounts.google.com"
+  default     = "example.com"
 }
 variable "SaaSApplication" {
   description = "Choose which application to allow for the domain"
@@ -55,14 +55,21 @@ locals {
     "eu-west-2"      = "ami-05e77069ed898709c"
   }
 
+  saas_login_hostnames = {
+    Google    = ["accounts.google.com"]
+    Microsoft = ["login.microsoftonline.com", "login.microsoft.com", "login.windows.net", "login.live.com"]
+    Slack     = ["slack.com"]
+    Dropbox   = ["www.dropbox.com"]
+  }
+
   init_script = templatefile("${path.module}/script.sh", {
     SaaSApplication       = var.SaaSApplication
-    Domain                = var.Domain
+    TenantDomain          = var.TenantDomain
     CertificateBody       = var.CertificateBody
     CertificatePrivateKey = var.CertificatePrivateKey
   })
 
-  domain_array = split(" ", var.Domain)
+  domain_array = local.saas_login_hostnames[var.SaaSApplication]
 }
 
 

@@ -24,7 +24,7 @@ mkdir -p /var/www/html/
 mkdir -p /var/checkrunning/
 mkdir -p /etc/nginx/
 header_type='${SaaSApplication}'
-domain='${Domain}'
+domain='${TenantDomain}'
 cat <<EOFINTER > /etc/nginx/intermediateCA.ext
 basicConstraints = critical,CA:TRUE,pathlen:0
 keyUsage = critical,keyCertSign,cRLSign
@@ -58,6 +58,7 @@ else
   echo "$CERTIFICATE_PRIVATE_KEY" > /etc/nginx/server.key
 fi
 
+extra_server_blocks=''
 if [[ $header_type == "Google" ]]; then
   cat <<GOOGLE > /etc/nginx/server.ext
 basicConstraints = CA:FALSE
@@ -73,8 +74,56 @@ basicConstraints = CA:FALSE
 nsCertType = server
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
-subjectAltName = DNS:stamp2.login.microsoftonline.com, DNS:login.microsoftonline-int.com, DNS:login.microsoftonline-p.com, DNS:login.microsoftonline.com, DNS:login2.microsoftonline-int.com, DNS:login2.microsoftonline.com, DNS:loginex.microsoftonline-int.com, DNS:loginex.microsoftonline.com, DNS:stamp2.login.microsoftonline-int.com
+subjectAltName = DNS:stamp2.login.microsoftonline.com, DNS:login.microsoftonline-int.com, DNS:login.microsoftonline-p.com, DNS:login.microsoftonline.com, DNS:login2.microsoftonline-int.com, DNS:login2.microsoftonline.com, DNS:loginex.microsoftonline-int.com, DNS:loginex.microsoftonline.com, DNS:stamp2.login.microsoftonline-int.com, DNS:login.microsoft.com, DNS:login.windows.net, DNS:login.live.com
 MICROSOFT
+  read -r -d '' extra_server_blocks <<'BLOCKEOF'
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name login.microsoft.com;
+    ssl_certificate     /etc/nginx/server.crt;
+    ssl_certificate_key /etc/nginx/server.key;
+    location / {
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_server_name on;
+        proxy_ssl_name login.microsoft.com;
+        proxy_pass https://login.microsoft.com;
+    }
+}
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name login.windows.net;
+    ssl_certificate     /etc/nginx/server.crt;
+    ssl_certificate_key /etc/nginx/server.key;
+    location / {
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_server_name on;
+        proxy_ssl_name login.windows.net;
+        proxy_pass https://login.windows.net;
+    }
+}
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name login.live.com;
+    ssl_certificate     /etc/nginx/server.crt;
+    ssl_certificate_key /etc/nginx/server.key;
+    location / {
+        proxy_set_header sec-Restrict-Tenant-Access-Policy "restrict-msa";
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_server_name on;
+        proxy_ssl_name login.live.com;
+        proxy_pass https://login.live.com;
+    }
+}
+BLOCKEOF
 fi
 if [[ $header_type == "Slack" ]]; then
   cat <<SLACK > /etc/nginx/server.ext
@@ -210,7 +259,7 @@ proxy_ssl_name accounts.google.com;"
         openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
         nginx_header="
       proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $domain;
-      X-Slack-Allowed-Workspaces' $domain;"
+      proxy_set_header 'X-Slack-Allowed-Workspaces' $domain;"
         nginx_proxy_pass="
       proxy_pass https://slack.com/signin;
       proxy_ssl_verify on;
@@ -404,6 +453,7 @@ server {
   $nginx_proxy_pass
         }
     }
+$extra_server_blocks
 EOFINNER2
 
 systemctl start nginx
