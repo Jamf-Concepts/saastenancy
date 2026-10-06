@@ -11,6 +11,10 @@ terraform {
     }
     aws = {
     }
+    random = {
+    }
+    local = {
+    }
   }
 }
 
