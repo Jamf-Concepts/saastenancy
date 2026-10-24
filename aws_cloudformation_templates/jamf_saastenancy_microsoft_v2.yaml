@@ -22,6 +22,9 @@
 # LOSS OF USE, PROFITS, SAVINGS, TIME OR DATA, BUSINESS INTERRUPTION,
 # OR PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES.
 
+# GENERATED FILE - do not edit by hand. Edit generator/base.yaml or generator/generate.py
+# and run `python3 generator/generate.py` to regenerate.
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: EC2 instance with Nginx reverse proxy for Microsoft tenant restrictions (v2 - sec-Restrict-Tenant-Access-Policy header).
 
@@ -159,14 +162,14 @@ Resources:
           openssl x509 -req -in /etc/nginx/microsoft.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
 
           nginx_header="
-                                      proxy_set_header 'sec-Restrict-Tenant-Access-Policy' $tenant_policy;"
+                                          proxy_set_header 'sec-Restrict-Tenant-Access-Policy' $tenant_policy;"
           nginx_proxy_pass="
-                                      proxy_pass https://login.microsoftonline.com;
-                                      proxy_ssl_verify on;
-                                      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
-                                      proxy_ssl_verify_depth 2;
-                                      proxy_ssl_server_name on;
-                                      proxy_ssl_name login.microsoftonline.com;"
+                                          proxy_pass https://login.microsoftonline.com;
+                                          proxy_ssl_verify on;
+                                          proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                          proxy_ssl_verify_depth 2;
+                                          proxy_ssl_server_name on;
+                                          proxy_ssl_name login.microsoftonline.com;"
 
           # Create MobileConfig to upload
           root_cert_body=$(openssl base64 -in /etc/nginx/rootCA.pem | tr -d '\n')

@@ -21,7 +21,10 @@ When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://lea
 ## Repository Structure
 
 ```
-├── aws_cloudformation_templates/   # Standalone CloudFormation templates
+├── generator/                      # Source of the CloudFormation templates
+│   ├── base.yaml                   #   shared template with slots
+│   └── generate.py                 #   per-app settings and renderer
+├── aws_cloudformation_templates/   # Standalone CloudFormation templates (generated)
 │   ├── jamf_saastenancy_google.yaml
 │   ├── jamf_saastenancy_microsoft_v1.yaml 
 │   ├── jamf_saastenancy_microsoft_v2.yaml
@@ -34,6 +37,15 @@ When paired with Jamf Security Cloud's [Custom DNS Hostname Mapping](https://lea
     ├── jscconfig.tf
     ├── prosaasconfig.tf
     └── proconfig.tf
+```
+
+### Editing the CloudFormation templates
+
+The files in `aws_cloudformation_templates/` are generated; do not edit them by hand. Change `generator/base.yaml` for anything shared (TLS verification, IMDSv2, the mobileconfig, nginx settings) or the per-app settings in `generator/generate.py` for one application, then run:
+
+```
+python3 generator/generate.py          # regenerate all templates
+python3 generator/generate.py --check  # fail if a template is out of date
 ```
 
 ## AWS CloudFormation Technical Components:

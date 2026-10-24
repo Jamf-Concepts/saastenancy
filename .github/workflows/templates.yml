@@ -1,0 +1,28 @@
+name: CloudFormation templates
+
+on:
+  pull_request:
+    paths:
+      - generator/**
+      - aws_cloudformation_templates/**
+      - .github/workflows/templates.yml
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Templates are up to date with the generator
+        run: python3 generator/generate.py --check
+      - name: Lint templates
+        run: |
+          pip install cfn-lint
+          cfn-lint aws_cloudformation_templates/*.yaml

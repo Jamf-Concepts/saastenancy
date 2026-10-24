@@ -22,6 +22,9 @@
 # LOSS OF USE, PROFITS, SAVINGS, TIME OR DATA, BUSINESS INTERRUPTION,
 # OR PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES.
 
+# GENERATED FILE - do not edit by hand. Edit generator/base.yaml or generator/generate.py
+# and run `python3 generator/generate.py` to regenerate.
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: EC2 instance with Nginx reverse proxy for Slack tenant restrictions.
 
@@ -168,15 +171,15 @@ Resources:
                   # Signing the CSR with internal CA
                   openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
                   nginx_header+="
-                                          proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $element;
-                                          proxy_set_header 'X-Slack-Allowed-Workspaces' $element;"
+                                                  proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $element;
+                                                  proxy_set_header 'X-Slack-Allowed-Workspaces' $element;"
                   nginx_proxy_pass="
-                                          proxy_pass https://slack.com/signin;
-                                          proxy_ssl_verify on;
-                                          proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
-                                          proxy_ssl_verify_depth 2;
-                                          proxy_ssl_server_name on;
-                                          proxy_ssl_name slack.com;"
+                                                  proxy_pass https://slack.com/signin;
+                                                  proxy_ssl_verify on;
+                                                  proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                                  proxy_ssl_verify_depth 2;
+                                                  proxy_ssl_server_name on;
+                                                  proxy_ssl_name slack.com;"
               done
 
           else
@@ -185,15 +188,15 @@ Resources:
               # Signing the CSR with internal CA
               openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
               nginx_header="
-                                          proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $domain;
-                                          proxy_set_header 'X-Slack-Allowed-Workspaces' $domain;"
+                                              proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $domain;
+                                              proxy_set_header 'X-Slack-Allowed-Workspaces' $domain;"
               nginx_proxy_pass="
-                                          proxy_pass https://slack.com/signin;
-                                          proxy_ssl_verify on;
-                                          proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
-                                          proxy_ssl_verify_depth 2;
-                                          proxy_ssl_server_name on;
-                                          proxy_ssl_name slack.com;"
+                                              proxy_pass https://slack.com/signin;
+                                              proxy_ssl_verify on;
+                                              proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                              proxy_ssl_verify_depth 2;
+                                              proxy_ssl_server_name on;
+                                              proxy_ssl_name slack.com;"
           fi
 
           # Create MobileConfig to upload
