@@ -65,6 +65,7 @@ Parameters:
     Description: The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)
     Type: String
     Default: ""
+    NoEcho: true
   Domain:
     Description: internal domain to add to the header if multiple seperated by space
     Type: String
@@ -104,6 +105,8 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: !FindInMap [RegionAMIs, !Ref "AWS::Region", AMI]
       SubnetId: !Ref SubnetId
+      MetadataOptions:
+        HttpTokens: required
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -166,10 +169,14 @@ Resources:
                   openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
                   nginx_header+="
                                           proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $element;
-
-                                          X-Slack-Allowed-Workspaces' $element;"
+                                          proxy_set_header 'X-Slack-Allowed-Workspaces' $element;"
                   nginx_proxy_pass="
-                                          proxy_pass https://slack.com/signin;"
+                                          proxy_pass https://slack.com/signin;
+                                          proxy_ssl_verify on;
+                                          proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                          proxy_ssl_verify_depth 2;
+                                          proxy_ssl_server_name on;
+                                          proxy_ssl_name slack.com;"
               done
 
           else
@@ -179,9 +186,14 @@ Resources:
               openssl x509 -req -in /etc/nginx/slack.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext
               nginx_header="
                                           proxy_set_header 'X-Slack-Allowed-Workspaces-Requester' $domain;
-                                          X-Slack-Allowed-Workspaces' $domain;"
+                                          proxy_set_header 'X-Slack-Allowed-Workspaces' $domain;"
               nginx_proxy_pass="
-                                          proxy_pass https://slack.com/signin;"
+                                          proxy_pass https://slack.com/signin;
+                                          proxy_ssl_verify on;
+                                          proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                          proxy_ssl_verify_depth 2;
+                                          proxy_ssl_server_name on;
+                                          proxy_ssl_name slack.com;"
           fi
 
           # Create MobileConfig to upload
@@ -342,8 +354,6 @@ Resources:
                       proxy_buffer_size 64k;
                       # Sets the maximum size of the buffers that can be busy sending a response to the client while the response is not fully read
                       proxy_busy_buffers_size 64k;
-                      #  Sets the DNS resolver to the IP address
-                      resolver   1.1.1.1 ipv6=off;
                       # Sets the Host header of the request to the host of the incoming client request
                       proxy_set_header Host \$host;
                       # Passes the original client IP address to the proxied server

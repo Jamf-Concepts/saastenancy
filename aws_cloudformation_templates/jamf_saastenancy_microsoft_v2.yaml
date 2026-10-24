@@ -65,6 +65,7 @@ Parameters:
     Description: The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)
     Type: String
     Default: ""
+    NoEcho: true
   TenantPolicy:
     Description: "Tenant restriction policy in format TenantId:policyGuid (e.g., aaaabbbb-0000-cccc-1111-dddd2222eeee:1aaaaaa1-2bb2-3cc3-4dd4-5eeeeeeeeee5)"
     Type: String
@@ -104,6 +105,8 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: !FindInMap [RegionAMIs, !Ref "AWS::Region", AMI]
       SubnetId: !Ref SubnetId
+      MetadataOptions:
+        HttpTokens: required
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -158,7 +161,12 @@ Resources:
           nginx_header="
                                       proxy_set_header 'sec-Restrict-Tenant-Access-Policy' $tenant_policy;"
           nginx_proxy_pass="
-                                      proxy_pass https://login.microsoftonline.com;"
+                                      proxy_pass https://login.microsoftonline.com;
+                                      proxy_ssl_verify on;
+                                      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                                      proxy_ssl_verify_depth 2;
+                                      proxy_ssl_server_name on;
+                                      proxy_ssl_name login.microsoftonline.com;"
 
           # Create MobileConfig to upload
           root_cert_body=$(openssl base64 -in /etc/nginx/rootCA.pem | tr -d '\n')
@@ -318,8 +326,6 @@ Resources:
                       proxy_buffer_size 64k;
                       # Sets the maximum size of the buffers that can be busy sending a response to the client while the response is not fully read
                       proxy_busy_buffers_size 64k;
-                      #  Sets the DNS resolver to the IP address
-                      resolver   1.1.1.1 ipv6=off;
                       # Sets the Host header of the request to the host of the incoming client request
                       proxy_set_header Host \$host;
                       # Passes the original client IP address to the proxied server

@@ -65,6 +65,7 @@ Parameters:
     Description: The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)
     Type: String
     Default: ""
+    NoEcho: true
   AllowedOrgIds:
     Description: Comma-separated list of allowed Anthropic organization UUIDs (no spaces)
     Type: String
@@ -104,6 +105,8 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: !FindInMap [RegionAMIs, !Ref "AWS::Region", AMI]
       SubnetId: !Ref SubnetId
+      MetadataOptions:
+        HttpTokens: required
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -313,14 +316,17 @@ Resources:
                       proxy_buffer_size 64k;
                       # Sets the maximum size of the buffers that can be busy sending a response to the client
                       proxy_busy_buffers_size 64k;
-                      # Sets the DNS resolver
-                      resolver   1.1.1.1 ipv6=off;
                       # Sets the Host header of the request to the host of the incoming client request
                       proxy_set_header Host \$host;
                       # Passes the original client IP address to the proxied server
                       proxy_set_header X-Real-IP \$remote_addr;
                       # Adding Anthropic tenant restriction header
                       proxy_set_header 'anthropic-allowed-org-ids' '$allowed_org_ids';
+                      proxy_ssl_verify on;
+                      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                      proxy_ssl_verify_depth 2;
+                      proxy_ssl_server_name on;
+                      proxy_ssl_name claude.ai;
                       proxy_pass https://claude.ai;
                   }
               }
@@ -346,14 +352,17 @@ Resources:
                       proxy_buffer_size 64k;
                       # Sets the maximum size of the buffers that can be busy sending a response to the client
                       proxy_busy_buffers_size 64k;
-                      # Sets the DNS resolver
-                      resolver   1.1.1.1 ipv6=off;
                       # Sets the Host header of the request to the host of the incoming client request
                       proxy_set_header Host \$host;
                       # Passes the original client IP address to the proxied server
                       proxy_set_header X-Real-IP \$remote_addr;
                       # Adding Anthropic tenant restriction header
                       proxy_set_header 'anthropic-allowed-org-ids' '$allowed_org_ids';
+                      proxy_ssl_verify on;
+                      proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+                      proxy_ssl_verify_depth 2;
+                      proxy_ssl_server_name on;
+                      proxy_ssl_name api.anthropic.com;
                       proxy_pass https://api.anthropic.com;
                   }
               }
