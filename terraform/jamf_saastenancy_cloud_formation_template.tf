@@ -8,24 +8,34 @@ variable "InstanceType" {
   type        = string
   default     = "t4g.micro"
 }
-variable "CertificateBody" {
-  description = "The body of the SSL/TLS certificate base64 encoded (leave empty for self signed)"
-  type        = string
-}
-variable "CertificatePrivateKey" {
-  description = "The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)"
-  type        = string
-  sensitive   = true
-}
 variable "TenantDomain" {
   description = "Tenant domain(s) to restrict sign-in to, injected into the SaaS tenant-restriction header; space separated if multiple"
   type        = string
   default     = "example.com"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._,-]+( [A-Za-z0-9._,-]+)*$", var.TenantDomain))
+    error_message = "TenantDomain must be one or more values separated by single spaces, using only letters, digits, dots, hyphens, underscores and commas."
+  }
+
+  # A SaaS login hostname here would be injected as an allowed tenant, so reject it
+  validation {
+    condition = !anytrue([
+      for d in split(" ", var.TenantDomain) :
+      contains(flatten(values(local.saas_login_hostnames)), lower(d))
+    ])
+    error_message = "TenantDomain must not be a SaaS login hostname (for example accounts.google.com or login.microsoftonline.com)."
+  }
 }
 variable "SaaSApplication" {
   description = "Choose which application to allow for the domain"
   type        = string
   default     = "Google"
+
+  validation {
+    condition     = contains(keys(local.saas_login_hostnames), var.SaaSApplication)
+    error_message = "SaaSApplication must be one of: ${join(", ", keys(local.saas_login_hostnames))}."
+  }
 }
 
 data "aws_vpc" "default" {
@@ -73,8 +83,6 @@ locals {
   init_script = templatefile("${path.module}/script.sh", {
     SaaSApplication       = var.SaaSApplication
     TenantDomain          = var.TenantDomain
-    CertificateBody       = var.CertificateBody
-    CertificatePrivateKey = var.CertificatePrivateKey
     SsmParameterName      = local.ssm_parameter_name
     AwsRegion             = var.aws_region
   })

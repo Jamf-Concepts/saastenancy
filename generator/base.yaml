@@ -60,15 +60,6 @@ Parameters:
       - t4g.micro
       - t4g.small
       - t4g.medium
-  CertificateBody:
-    Description: The body of the SSL/TLS certificate base64 encoded (leave empty for self signed)
-    Type: String
-    Default: ""
-  CertificatePrivateKey:
-    Description: The private key of the SSL/TLS certificate base64 encoded (leave empty for self signed)
-    Type: String
-    Default: ""
-    NoEcho: true
   @@TENANT_PARAM@@
   VPCId:
     Description: VPC Id where the instance will be launched
@@ -119,31 +110,12 @@ Resources:
           keyUsage = critical,keyCertSign,cRLSign
           EOFINTER
 
-          CERTIFICATE_BODY='${CertificateBody}'
-          CERTIFICATE_PRIVATE_KEY='${CertificatePrivateKey}'
-          # Checking for SSL Certificate and if not present creating Self Signed Root CA
-          cert_regex="^-----BEGIN CERTIFICATE-----"
-          private_key_regex="^-----BEGIN PRIVATE KEY-----"
-          if [[ ! $CERTIFICATE_BODY =~ $cert_regex ]]; then
-              CERTIFICATE_BODY=""
-          fi
-
-          if [[ ! $CERTIFICATE_PRIVATE_KEY  =~ $private_key_regex ]]; then
-              CERTIFICATE_PRIVATE_KEY=""
-          fi
-          if [[ -z "$CERTIFICATE_BODY" || -z "$CERTIFICATE_PRIVATE_KEY" ]]; then
-            # Generate a self-signed certificate root CA
-            openssl genrsa -out /etc/nginx/rootCA.key 4096
-            openssl genrsa -out /etc/nginx/intermediateCA.key 4096
-            openssl req -x509 -new -nodes -key /etc/nginx/rootCA.key -sha256 -days 365 -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-root" -out /etc/nginx/rootCA.pem
-            openssl req -new -key /etc/nginx/intermediateCA.key -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-intermediate" -out /etc/nginx/intermediateCA.csr
-            openssl x509 -req -in /etc/nginx/intermediateCA.csr -CA /etc/nginx/rootCA.pem -CAkey /etc/nginx/rootCA.key -CAcreateserial -out /etc/nginx/intermediateCA.pem -days 365 -sha256 -extfile /etc/nginx/intermediateCA.ext
-
-          else
-            # Use provided certificate
-            echo "$CERTIFICATE_BODY" > /etc/nginx/server.crt
-            echo "$CERTIFICATE_PRIVATE_KEY" > /etc/nginx/server.key
-          fi
+          # Generate a self-signed root CA and an intermediate CA signed by it
+          openssl genrsa -out /etc/nginx/rootCA.key 4096
+          openssl genrsa -out /etc/nginx/intermediateCA.key 4096
+          openssl req -x509 -new -nodes -key /etc/nginx/rootCA.key -sha256 -days 365 -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-root" -out /etc/nginx/rootCA.pem
+          openssl req -new -key /etc/nginx/intermediateCA.key -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-intermediate" -out /etc/nginx/intermediateCA.csr
+          openssl x509 -req -in /etc/nginx/intermediateCA.csr -CA /etc/nginx/rootCA.pem -CAkey /etc/nginx/rootCA.key -CAcreateserial -out /etc/nginx/intermediateCA.pem -days 365 -sha256 -extfile /etc/nginx/intermediateCA.ext
 
           @@EXTRA_INIT@@
           cat <<SERVEREXT > /etc/nginx/server.ext
@@ -327,6 +299,8 @@ Resources:
           @@EXTRA_BLOCKS_REF@@
           EOF
 
+          # Fail provisioning visibly rather than start a proxy that is not enforcing the restriction
+          nginx -t || { echo "nginx configuration test failed" >&2; exit 1; }
           systemctl start nginx
           systemctl enable nginx
 

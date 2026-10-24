@@ -50,6 +50,15 @@ resource "jamfpro_macos_configuration_profile_plist" "jamfpro_macos_configuratio
       condition     = length(base64decode(trimspace(data.local_file.profile.content))) > 0
       error_message = "Decoded profile content is empty; the SSM parameter may contain an invalid or empty value"
     }
+
+    # payload_validate is false, so check the structure here before the profile is scoped to all computers
+    precondition {
+      condition = (
+        length(regexall("<string>com\\.apple\\.security\\.root</string>", base64decode(trimspace(data.local_file.profile.content)))) == 1 &&
+        length(regexall("<data>[A-Za-z0-9+/=]{100,}</data>", base64decode(trimspace(data.local_file.profile.content)))) == 3
+      )
+      error_message = "Decoded profile must contain exactly one com.apple.security.root payload and three non-empty certificate <data> blocks (root, intermediate, leaf)"
+    }
   }
 }
 

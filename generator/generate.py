@@ -22,13 +22,17 @@ DOMAIN_PARAM = """\
 Domain:
   Description: internal domain to add to the header if multiple seperated by space
   Type: String
-  Default: "example.com example.dev\""""
+  Default: "example.com example.dev"
+  AllowedPattern: '^[A-Za-z0-9._,-]+( [A-Za-z0-9._,-]+)*$'
+  ConstraintDescription: One or more values separated by single spaces, using only letters, digits, dots, hyphens, underscores and commas."""
 
 TENANT_POLICY_PARAM = """\
 TenantPolicy:
   Description: "Tenant restriction policy in format TenantId:policyGuid (e.g., aaaabbbb-0000-cccc-1111-dddd2222eeee:1aaaaaa1-2bb2-3cc3-4dd4-5eeeeeeeeee5)"
   Type: String
-  Default: "your-tenant-id:your-policy-guid\""""
+  Default: "your-tenant-id:your-policy-guid"
+  AllowedPattern: '^[A-Za-z0-9.-]+:[A-Za-z0-9-]+$'
+  ConstraintDescription: Must be TenantId:policyGuid."""
 
 MICROSOFT_SANS = [
     "stamp2.login.microsoftonline.com", "login.microsoftonline-int.com",
@@ -44,6 +48,27 @@ def san(*names):
     return ", ".join(f"DNS:{n}" for n in names)
 
 
+def redirect_pattern(sans):
+    """Regex for absolute http(s) URLs on one of the served hosts (a leading *. matches any subdomain)."""
+    names = [n.strip()[len("DNS:"):] for n in sans.split(",")]
+    alts = "|".join(
+        ("(?:[^/.]+\\.)+" if n.startswith("*.") else "") + n.lstrip("*.").replace(".", "\\.")
+        for n in names
+    )
+    return f"^https?://(?!(?:{alts})(?::[0-9]+)?(?:/|$))[^/]+(.*)"
+
+
+def proxy_redirect_line(sans, escape_dollar):
+    """Rewrite Location headers naming a host outside the SAN list back onto the proxy.
+
+    Without this an upstream redirect to another host sends the client around the proxy,
+    so no tenant-restriction header is injected. escape_dollar is for use inside a
+    double-quoted shell string, where $host and $1 must reach nginx unexpanded.
+    """
+    d = "\\$" if escape_dollar else "$"
+    return f"proxy_redirect '~*{redirect_pattern(sans)}' https://{d}host{d}1;"
+
+
 def csr_block(label, name, cn):
     return f"""\
 # Creating CSR for {label}
@@ -52,7 +77,7 @@ openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/ngin
 openssl x509 -req -in /etc/nginx/{name}.csr -CA /etc/nginx/intermediateCA.pem -CAkey /etc/nginx/intermediateCA.key -CAcreateserial -out /etc/nginx/server.crt -days 365 -sha256 -extfile /etc/nginx/server.ext"""
 
 
-def proxy_pass_lines(upstream_url, ssl_name):
+def proxy_pass_lines(upstream_url, ssl_name, sans):
     """Upstream proxy_pass with TLS verification against the system CA bundle."""
     return [
         f"proxy_pass {upstream_url};",
@@ -61,6 +86,7 @@ def proxy_pass_lines(upstream_url, ssl_name):
         "proxy_ssl_verify_depth 2;",
         "proxy_ssl_server_name on;",
         f"proxy_ssl_name {ssl_name};",
+        proxy_redirect_line(sans, escape_dollar=True),
     ]
 
 
@@ -77,7 +103,7 @@ def header_lines(headers, value):
 def multi_domain_logic(app):
     """Single or space-separated list of domains injected as header values."""
     csr = csr_block(app["csr_label"], app["csr_name"], app["csr_cn"])
-    proxy = proxy_pass_lines(app["upstream_url"], app["ssl_name"])
+    proxy = proxy_pass_lines(app["upstream_url"], app["ssl_name"], app["san"])
     indent = lambda text, n: "\n".join(" " * n + l if l else l for l in text.split("\n"))
     return "\n".join([
         "# Checking if domain is multiple",
@@ -106,7 +132,7 @@ def multi_domain_logic(app):
 def single_tenant_logic(app):
     """One fixed policy value, no domain list."""
     csr = csr_block(app["csr_label"], app["csr_name"], app["csr_cn"])
-    proxy = proxy_pass_lines(app["upstream_url"], app["ssl_name"])
+    proxy = proxy_pass_lines(app["upstream_url"], app["ssl_name"], app["san"])
     return "\n".join([
         csr,
         "",
@@ -115,7 +141,7 @@ def single_tenant_logic(app):
     ])
 
 
-def extra_server_block(host, extra_directives=()):
+def extra_server_block(host, sans, extra_directives=()):
     lines = [
         "server {",
         "    listen 443 ssl;",
@@ -125,6 +151,7 @@ def extra_server_block(host, extra_directives=()):
         "    ssl_certificate_key /etc/nginx/server.key;",
         "    location / {",
         *(f"        {d}" for d in extra_directives),
+        f"        {proxy_redirect_line(sans, escape_dollar=False)}",
         "        proxy_ssl_verify on;",
         "        proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;",
         "        proxy_ssl_verify_depth 2;",
@@ -143,11 +170,13 @@ def microsoft_v1_extra_blocks():
     login.live.com is the consumer-account endpoint; restrict-msa blocks personal
     Microsoft accounts (without it they bypass the tenant restriction).
     """
+    sans = san(*MICROSOFT_SANS)
     blocks = [
-        extra_server_block("login.microsoft.com"),
-        extra_server_block("login.windows.net"),
+        extra_server_block("login.microsoft.com", sans),
+        extra_server_block("login.windows.net", sans),
         extra_server_block(
             "login.live.com",
+            sans,
             ['proxy_set_header sec-Restrict-Tenant-Access-Policy "restrict-msa";'],
         ),
     ]

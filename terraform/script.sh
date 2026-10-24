@@ -30,33 +30,12 @@ basicConstraints = critical,CA:TRUE,pathlen:0
 keyUsage = critical,keyCertSign,cRLSign
 EOFINTER
 mkdir -p /var/checkrunning2/
-CERTIFICATE_BODY='${CertificateBody}'
-CERTIFICATE_PRIVATE_KEY='${CertificatePrivateKey}'
-# Checking for SSL Certificate and if not present creating Self Signed Root CA
-cert_regex="^-----BEGIN CERTIFICATE-----"
-private_key_regex="^-----BEGIN PRIVATE KEY-----"
-if [[ ! $CERTIFICATE_BODY =~ $cert_regex ]]; then
-    CERTIFICATE_BODY=""
-fi
-
-if [[ ! $CERTIFICATE_PRIVATE_KEY  =~ $private_key_regex ]]; then
-    CERTIFICATE_PRIVATE_KEY=""
-fi
-if [[ -z "$CERTIFICATE_BODY" || -z "$CERTIFICATE_PRIVATE_KEY" ]]; then
-  # Generate a self-signed certificate root CA
-  echo "Attempting to self-sign" > /var/www/html/filename.txt
-  openssl genrsa -out /etc/nginx/rootCA.key 4096
-  openssl genrsa -out /etc/nginx/intermediateCA.key 4096
-  openssl req -x509 -new -nodes -key /etc/nginx/rootCA.key -sha256 -days 365 -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-root" -out /etc/nginx/rootCA.pem
-  openssl req -new -key /etc/nginx/intermediateCA.key -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-intermediate" -out /etc/nginx/intermediateCA.csr
-  openssl x509 -req -in /etc/nginx/intermediateCA.csr -CA /etc/nginx/rootCA.pem -CAkey /etc/nginx/rootCA.key -CAcreateserial -out /etc/nginx/intermediateCA.pem -days 365 -sha256 -extfile /etc/nginx/intermediateCA.ext
-
-else
-  # Use provided certificate
-  echo "Attempting to user certs" > /var/www/html/filename.txt
-  echo "$CERTIFICATE_BODY" > /etc/nginx/server.crt
-  echo "$CERTIFICATE_PRIVATE_KEY" > /etc/nginx/server.key
-fi
+# Generate a self-signed root CA and an intermediate CA signed by it
+openssl genrsa -out /etc/nginx/rootCA.key 4096
+openssl genrsa -out /etc/nginx/intermediateCA.key 4096
+openssl req -x509 -new -nodes -key /etc/nginx/rootCA.key -sha256 -days 365 -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-root" -out /etc/nginx/rootCA.pem
+openssl req -new -key /etc/nginx/intermediateCA.key -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=jscproxy-intermediate" -out /etc/nginx/intermediateCA.csr
+openssl x509 -req -in /etc/nginx/intermediateCA.csr -CA /etc/nginx/rootCA.pem -CAkey /etc/nginx/rootCA.key -CAcreateserial -out /etc/nginx/intermediateCA.pem -days 365 -sha256 -extfile /etc/nginx/intermediateCA.ext
 
 extra_server_blocks=''
 if [[ $header_type == "Google" ]]; then
@@ -89,6 +68,7 @@ server {
         proxy_ssl_verify_depth 2;
         proxy_ssl_server_name on;
         proxy_ssl_name login.microsoft.com;
+        proxy_redirect '~*^https?://(?!(?:stamp2\.login\.microsoftonline\.com|login\.microsoftonline-int\.com|login\.microsoftonline-p\.com|login\.microsoftonline\.com|login2\.microsoftonline-int\.com|login2\.microsoftonline\.com|loginex\.microsoftonline-int\.com|loginex\.microsoftonline\.com|stamp2\.login\.microsoftonline-int\.com|login\.microsoft\.com|login\.windows\.net|login\.live\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://$host$1;
         proxy_pass https://login.microsoft.com;
     }
 }
@@ -104,6 +84,7 @@ server {
         proxy_ssl_verify_depth 2;
         proxy_ssl_server_name on;
         proxy_ssl_name login.windows.net;
+        proxy_redirect '~*^https?://(?!(?:stamp2\.login\.microsoftonline\.com|login\.microsoftonline-int\.com|login\.microsoftonline-p\.com|login\.microsoftonline\.com|login2\.microsoftonline-int\.com|login2\.microsoftonline\.com|loginex\.microsoftonline-int\.com|loginex\.microsoftonline\.com|stamp2\.login\.microsoftonline-int\.com|login\.microsoft\.com|login\.windows\.net|login\.live\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://$host$1;
         proxy_pass https://login.windows.net;
     }
 }
@@ -120,6 +101,7 @@ server {
         proxy_ssl_verify_depth 2;
         proxy_ssl_server_name on;
         proxy_ssl_name login.live.com;
+        proxy_redirect '~*^https?://(?!(?:stamp2\.login\.microsoftonline\.com|login\.microsoftonline-int\.com|login\.microsoftonline-p\.com|login\.microsoftonline\.com|login2\.microsoftonline-int\.com|login2\.microsoftonline\.com|loginex\.microsoftonline-int\.com|loginex\.microsoftonline\.com|stamp2\.login\.microsoftonline-int\.com|login\.microsoft\.com|login\.windows\.net|login\.live\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://$host$1;
         proxy_pass https://login.live.com;
     }
 }
@@ -167,7 +149,8 @@ proxy_ssl_verify on;
 proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
 proxy_ssl_verify_depth 2;
 proxy_ssl_server_name on;
-proxy_ssl_name accounts.google.com;"
+proxy_ssl_name accounts.google.com;
+proxy_redirect '~*^https?://(?!(?:accounts\.google\.com|(?:[^/.]+\.)+google\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
         elif [[ $header_type == "Microsoft" ]]; then
   openssl req -newkey rsa:2048 -keyout /etc/nginx/server.key -nodes -out /etc/nginx/microsoft.csr -subj "/C=US/ST=MN/L=Minneapolis/O=Jamf/OU=Security/CN=stamp2.login.microsoftonline.com"
@@ -182,7 +165,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name login.microsoftonline.com;"
+      proxy_ssl_name login.microsoftonline.com;
+proxy_redirect '~*^https?://(?!(?:stamp2\.login\.microsoftonline\.com|login\.microsoftonline-int\.com|login\.microsoftonline-p\.com|login\.microsoftonline\.com|login2\.microsoftonline-int\.com|login2\.microsoftonline\.com|loginex\.microsoftonline-int\.com|loginex\.microsoftonline\.com|stamp2\.login\.microsoftonline-int\.com|login\.microsoft\.com|login\.windows\.net|login\.live\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
         elif [[ $header_type == "Slack" ]]; then
   # Creating CSR for Slack
@@ -198,7 +182,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name slack.com;"
+      proxy_ssl_name slack.com;
+proxy_redirect '~*^https?://(?!(?:slack\.com|(?:[^/.]+\.)+slack\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
         elif [[ $header_type == "Dropbox" ]]; then
   # Creating CSR for Dropbox
@@ -213,7 +198,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name www.dropbox.com;"
+      proxy_ssl_name www.dropbox.com;
+proxy_redirect '~*^https?://(?!(?:dropbox\.com|(?:[^/.]+\.)+dropbox\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
         fi
     done
@@ -234,7 +220,8 @@ proxy_ssl_verify on;
 proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
 proxy_ssl_verify_depth 2;
 proxy_ssl_server_name on;
-proxy_ssl_name accounts.google.com;"
+proxy_ssl_name accounts.google.com;
+proxy_redirect '~*^https?://(?!(?:accounts\.google\.com|(?:[^/.]+\.)+google\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
     elif [[ $header_type == "Microsoft" ]]; then
         # Creating CSR for Microsoft
@@ -250,7 +237,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name login.microsoftonline.com;"
+      proxy_ssl_name login.microsoftonline.com;
+proxy_redirect '~*^https?://(?!(?:stamp2\.login\.microsoftonline\.com|login\.microsoftonline-int\.com|login\.microsoftonline-p\.com|login\.microsoftonline\.com|login2\.microsoftonline-int\.com|login2\.microsoftonline\.com|loginex\.microsoftonline-int\.com|loginex\.microsoftonline\.com|stamp2\.login\.microsoftonline-int\.com|login\.microsoft\.com|login\.windows\.net|login\.live\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
     elif [[ $header_type == "Slack" ]]; then
         # Creating CSR for Slack
@@ -266,7 +254,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name slack.com;"
+      proxy_ssl_name slack.com;
+proxy_redirect '~*^https?://(?!(?:slack\.com|(?:[^/.]+\.)+slack\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
     elif [[ $header_type == "Dropbox" ]]; then
         # Creating CSR for Dropbox
@@ -281,7 +270,8 @@ proxy_ssl_name accounts.google.com;"
       proxy_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
       proxy_ssl_verify_depth 2;
       proxy_ssl_server_name on;
-      proxy_ssl_name www.dropbox.com;"
+      proxy_ssl_name www.dropbox.com;
+proxy_redirect '~*^https?://(?!(?:dropbox\.com|(?:[^/.]+\.)+dropbox\.com)(?::[0-9]+)?(?:/|$))[^/]+(.*)' https://\$host\$1;"
 
     fi
 fi
@@ -424,7 +414,7 @@ server {
 
     # Redirect all other traffic from HTTP to HTTPS
     location / {
-        return 301 https://$host$request_uri;
+        return 301 https://\$host\$request_uri;
     }
 }
 server {
@@ -459,5 +449,7 @@ server {
 $extra_server_blocks
 EOFINNER2
 
+# Fail provisioning visibly rather than start a proxy that is not enforcing the restriction
+nginx -t || { echo "nginx configuration test failed" >&2; exit 1; }
 systemctl start nginx
 systemctl enable nginx
